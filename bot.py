@@ -1,15 +1,17 @@
 import asyncio
+import re
 import sys
-from os import path, environ
+from os import path, getenv
 from opengsq.protocols import GameSpy3
 import discord
 
 """BF4 ONLY"""
 # CONFIG
-BOT_TOKEN = environ['token']
-SERVER_IP = environ['ip']
-SERVER_PORT = environ['port']
-GUILD_ID = environ['guild']
+BOT_TOKEN = getenv("token", "")
+SERVER_IP = getenv("ip", "146.59.228.238")
+SERVER_PORT = getenv("port", "29900")
+GUILD_ID = getenv("guild", "770746735533228083")
+EXP = getenv("exp", "SUPER@ - (.*?)$")
 
 class LivePlayercountBot(discord.Client):
     """Discord bot to display the BL true playercount in the bot status"""
@@ -18,10 +20,9 @@ class LivePlayercountBot(discord.Client):
         print(f"Logged on as {self.user}\n" f"Started monitoring server {SERVER_IP}:{SERVER_PORT}")
         status = ""
         current_servername = ""
-        current_mapname = ""
         while True:
             try:
-                server_info, map_name, server_name = await get_playercount()
+                server_info, server_name = await get_playercount()
                 if server_info == None:
                     await self.change_presence(activity=discord.Game("¯\\_(ツ)_/¯ server not found"))
                 else:
@@ -30,12 +31,11 @@ class LivePlayercountBot(discord.Client):
                         status = server_info
                         
                     if current_servername != server_name: # avoid spam to the discord API
+                        x = re.search(EXP, server_name)
+
                         guild = self.get_guild(int(GUILD_ID))
-                        await guild.me.edit(nick=server_name[:32])
-                        current_servername = server_name
-                        
-                    if current_mapname != map_name: # avoid spam to the discord API
-                        to_check = f"maps/{map_name.lower().replace(' ', '_')}"
+                        await guild.me.edit(nick=x.group(1)[:32])
+                        to_check = f"maps/{x.group(1)}"
                         if path.exists(f"{to_check}.jpg"):
                             map_slug = f"{to_check}.jpg"
                         elif path.exists(f"{to_check}.png"):
@@ -45,7 +45,8 @@ class LivePlayercountBot(discord.Client):
                         
                         with open(map_slug, 'rb') as f:
                             await self.user.edit(avatar=f.read())
-                        current_mapname = map_name
+                            
+                        current_servername = server_name
             except Exception as e:
                 print(e)
             await asyncio.sleep(10)
@@ -59,14 +60,14 @@ async def get_playercount():
         server_name = data['info']["hostname"]
         true_playercount = int(data["info"]["numplayers"])
         server_info = f"{true_playercount}/{max_slots} - {map_name}"  # discord status message
-        return server_info, map_name, server_name
+        return server_info, server_name
     except Exception as e:
         print(f"Error getting data from server: {e}")  # BL autism
-        return None, None, None
+        return None, None
  
 if __name__ == "__main__":
     assert sys.version_info >= (3, 7), "Script requires Python 3.7+"
-    assert SERVER_IP and SERVER_PORT and BOT_TOKEN, "Config is empty, pls fix"
+    assert SERVER_IP and SERVER_PORT and BOT_TOKEN and EXP and GUILD_ID, "Config is empty, pls fix"
     print("Initiating bot")
     LivePlayercountBot().run(BOT_TOKEN)
 
