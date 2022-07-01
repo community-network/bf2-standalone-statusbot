@@ -35,9 +35,11 @@ class LivePlayercountBot(discord.Client):
                         current_servername = server_name
                         
                     if current_mapname != map_name: # avoid spam to the discord API
-                        to_check = f"maps/{map_name.lower().replace(' ', '_')}.jpg"
-                        if path.exists(to_check):
-                            map_slug = to_check
+                        to_check = f"maps/{map_name.lower().replace(' ', '_')}"
+                        if path.exists(f"{to_check}.jpg"):
+                            map_slug = f"{to_check}.jpg"
+                        if path.exists(f"{to_check}.png"):
+                            map_slug = f"{to_check}.png"
                         else:
                             map_slug = "maps/default.jpg"
                         
